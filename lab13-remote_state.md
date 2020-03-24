@@ -53,7 +53,7 @@ Create a new file called `backend.tf` with the following configuration
 terraform {
   backend "remote" {
     hostname = "tfe-nfcu.digitalinnovation.dev"
-    organization = "workshop"
+    organization = "<YOUR_ORGANIAZTION_NAME>"
 
     workspaces {
       name = "<YOUR_WORKSPACE_NAME>"
