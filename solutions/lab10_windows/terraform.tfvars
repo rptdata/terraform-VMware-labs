@@ -1,0 +1,11 @@
+vsphere_ip       = "192.168.169.11"
+username         = "gabe@vsphere.local"
+password         = "P@ssw0rd01"
+prefix           = "GHM"
+vcpus            = "2"
+memory           = "4096"
+datastore        = "380SSDDatastore2"
+windows_template = "Win2019a"
+windows_count    = 1
+tag_tier         = "Gold"
+tag_release      = "Windows 2019 - FY2020 Q1 Release"
