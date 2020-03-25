@@ -1,4 +1,4 @@
-# Lab 15: Template Creation using Packer
+# Lab 20: Template Creation using Packer
 
 Duration: 30 minutes
 
@@ -21,100 +21,147 @@ To build an image packer utilizes a JSON file with the following sections...
 * responsible for creating machines and generating images from them for various platforms.
 * You can have multiple builder types in one file.
 
-Below is an example of a basic builder from a vmware-iso
-```
+Below is an example of a basic builder from a vsphere-clone
+Create a json file with the following builder.
 
- "builders": [
+```json
+
+"builders": [
     {
-        "type": "vmware-iso",
-        "iso_url": "http://old-releases.ubuntu.com/releases/precise/ubuntu-12.04.2-server-amd64.iso",
-        "iso_checksum": "af5f788aee1b32c4b2634734309cc9e9",
-        "iso_checksum_type": "md5",
-        "ssh_username": "packer",
-        "ssh_password": "packer",
-        "shutdown_command": "shutdown -P now"
+      "type": "vsphere-clone",
+      "vcenter_server": "192.168.169.11",
+      "username": "<USERNAME>",
+      "password": "<PASSWORD>",
+      "datacenter": "Datacenter",
+      "cluster": "East",
+      "insecure_connection": true,
+      "datastore": "380SSDDatastoreRAID1",
+      "communicator": "winrm",
+      "winrm_username": "Administrator",
+      "winrm_password": "P@ssw0rd01",
+      "template": "Win2019a",
+      "vm_name": "Win2019-{{isotime \"2006-01-02 03:04:05\"}}",
+      "convert_to_template": true
     }
-],
+  ]
+}
 
 ```
+Validate your configuration.
+
+```shell
+>packer validate win2019.json
+```
+
 ##### [Variables](https://www.packer.io/docs/templates/user-variables.html)
 * User variables allow your templates to be further configured with variables from the command-line, environment variables, Vault, or files.
     * **Note**: these can be definied within the main JSON file and also be passed from an additional variable file, we will cover how to pass those variables further below
 
-Below is an example of a variable section that would be in a main file for a Packer build
-```
+Below is an example of a variable section that would be in a main file for a Packer build along with using environment variables for the username and password.
+```json
 {
   "variables": {
-    "ssh_user": "",
-    "ssh_password": "",
-    "network": "VLAN_28",
-    "template_name": "DSM_Update",
-    "iso_path": "iso",
-    "vmname": "dsm",
-    "storenumber": "{{ env `storenumber`}}",
-    "islab": "y",
-    "ks_file": "ks.cfg",
-    "cpu_cores": "4",
-    "ram_mb": "4096",
-    "disk_size": "82240",
-    "vmtype":   "centos7_64Guest"  
+      "datacenter": "Datacenter",
+      "cluster": "East",
+      "insecure_connection": true,
+      "datastore": "380SSDDatastoreRAID1",
+      "communicator": "winrm",
+      "winrm_username": "Administrator",
+      "winrm_password": "P@ssw0rd01",
+      "template": "Win2019a",
+      "vm_name": "Win2019",
+      "convert_to_template": true
 },
 
-```
+"builders": [
+    {
+      "type": "vsphere-clone",
+      "vcenter_server": "192.168.169.11",
+      "username": "{{ env `vcenter_username`}}",
+      "password": "{{env `vcenter_password`}}",
+      "datacenter": "{{ user `datacenter` }}",
+      "cluster": "{{ user `cluster` }}",
+      "insecure_connection": true,
+      "datastore": "{{ user `datastore` }}",
+      "communicator": "{{ user `communicator` }}",
+      "winrm_username": "{{ user `winrm_username` }}",
+      "winrm_password": "{{ user `winrm_password` }}",
+      "template": "{{ user `template` }}",
+      "vm_name": "{{user `vm_name`}}-{{isotime \"2006-01-02 03:04:05\"}}",
+      "convert_to_template": true
+    }
+  ]
+}
 
-Below is an example of a stand alone variable file *The main difference is variables is **NOT** specified at the top as in the previous example*
-
 ```
+Here we can follow enter the same cli commands to validate and build since the variables are within the same json.
+
+Below is an example of a standalone variable file *The main difference is variables is **NOT** specified at the top as in the previous example*
+
+You can choose to create a separate variables file for this lab or continue with using the variable stanza at the top of your configuration file.
+
+```json
 
 {
-      "vcenter_host": "example",
-      "vcenter_user": "example",
-      "vcenter_password": "example",
-      "dc": "Labs",
-      "cluster": "Lab015",
-      "storage": "Data-10015",
-      "vmfolder": "Lab015/Templates"
+      "datacenter": "Datacenter",
+      "cluster": "East",
+      "insecure_connection": true,
+      "datastore": "380SSDDatastoreRAID1",
+      "communicator": "winrm",
+      "winrm_username": "Administrator",
+      "winrm_password": "P@ssw0rd01",
+      "template": "Win2019a",
+      "vm_name": "Win2019",
+      "convert_to_template": true
 }
 
 ```
 
+In order to validate and build we need to specify the var file to use.
+
+```shell
+>packer validate -var-file=win-vars.json win2019.json 
+```
+
+
 ##### [Provsioners](https://www.packer.io/docs/provisioners/index.html)
 * use builtin and third-party software to install and configure the machine image after booting. Provisioners prepare the system for use, so common use cases for provisioners include:
     * installing packages 
-    * patching the kernel 
+    * patching 
     * creating users 
     * downloading application code
         
 
 Below is an example of a provisioner section that would be in the main json file
-```
+
+Create a folder called `scripts` with a file called `example.txt`
+
+```json
 
 "provisioners": [
 {
   "type": "file",
-  "source": "./scripts/dsm_config.sh",
-  "destination": "/tmp/dsm_config.sh"
+  "source": "./scripts/example.txt",
+  "destination": "/tmp/example.txt"
 },
 {
   "type": "shell",
-  "inline": ["chmod +x /tmp/dsm_config.sh",
-	     "/tmp/dsm_config.sh {{ user `storenumber` }} {{ user `islab` }}"
-            ]
+  "inline": "powershell.exe -executionpolicy bypass Install-WindowsFeature -Name Web-Server -IncludeAllSubFeature"
 }
-  ],
+]
 
 ```
 ##### [Post-Processors](https://www.packer.io/docs/post-processors/index.html)
 * run after the image is built by the builder and provisioned by the provisioner(s). Post-processors are optional, and they can be used to upload artifacts, re-package, or more.
 
 Example of a post processor
-```
+```json
 
 {
   "post-processors": [
     {
       "type": "compress",
-      "format": "tar.gz"
+      "output": "build.zip"
     }
   ]
 }
@@ -125,7 +172,7 @@ Example of a post processor
 ##### Organizing a complete file
 * As best practice the file should follow the format shown below
 
-```
+```json
 
 {
   "variables": {
@@ -133,7 +180,7 @@ Example of a post processor
 },
   "builders": [
 	{
-      "type": "vsphere-iso",
+      "type": "vsphere-clone",
     },
   ],
   "provisioners": [
