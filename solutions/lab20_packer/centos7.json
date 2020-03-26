@@ -1,0 +1,20 @@
+{
+"builders": [
+    {
+      "type": "vsphere-clone",
+      "vcenter_server": "192.168.169.11",
+      "username": "gabe@vsphere.local",
+      "password": "P@ssw0rd01",
+      "datacenter": "Datacenter",
+      "cluster": "East",
+      "insecure_connection": true,
+      "datastore": "370SSDDatastore1",
+      "communicator": "ssh",
+      "ssh_username": "root",
+      "ssh_password": "P@ssw0rd01",
+      "template": "CentOS7",
+      "vm_name": "CentOS7-{{isotime \"2006-01-02 03:04:05\"}}",
+      "convert_to_template": true
+    }
+  ]
+}
